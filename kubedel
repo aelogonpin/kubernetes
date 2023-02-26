@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Obtener la lista de recursos y almacenarlos en un array
+resources=($(kubectl get all | awk '{print $1}' | grep -v NAME))
+
+# Crear una variable para almacenar los recursos seleccionados
+selected_resources=""
+
+# Crear un diálogo Zenity de selección de recursos
+selected_resources=$(zenity --list --title "Eliminar recurso" --column "Recursos" "${resources[@]}" --width=600 --height=400 --multiple)
+
+# Comprobar si se han seleccionado recursos y confirmar la eliminación
+if [ -n "$selected_resources" ]; then
+  zenity --question --text "¿Estás seguro de que deseas eliminar los recursos seleccionados?"
+  if [ $? -eq 0 ]; then
+    # Separar los recursos seleccionados en un array
+    IFS="|" read -a resources_array <<< "$selected_resources"
+    
+    # Iterar a través de los recursos seleccionados y eliminarlos individualmente
+    for resource in "${resources_array[@]}"
+    do
+      kubectl delete "$resource"
+    done
+    
+    zenity --info --text "Los recursos seleccionados han sido eliminados exitosamente"
+  else
+    zenity --info --text "La eliminación de los recursos seleccionados ha sido cancelada"
+  fi
+else
+  zenity --error --text "No se ha seleccionado ningún recurso"
+fi
